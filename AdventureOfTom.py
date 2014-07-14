@@ -45,7 +45,22 @@ def load_image(name):
 def load_sound(name):
     return simplegui.load_sound(directory + name)
 
+class SoundLoop():
+    def __init__(self, sound, milliseconds):
+        self.sound = sound
+        self.timer = simplegui.create_timer(milliseconds, sound.play)
+    
+    def start(self):
+        self.sound.play()
+        self.timer.start()
+        
+    def stop(self):
+		self.sound.pause()
+        self.timer.stop()
+
 ready = False # whether or not all of the resources have been loaded
+
+MAIN_THEME = SoundLoop(load_sound('Theme.mp3'), 10)
 
 class Tom():
     IMAGE_SIZE = (100,100) # size of a single Tom frame
@@ -868,8 +883,8 @@ class Level():
         
         self.checkpoints = list() # the checkpoints in this level for falling off
         
-		self.boss = None # by default, level doesn't have a boss
-		
+        self.boss = None # by default, level doesn't have a boss
+        
         count = dict() # counting each cell type to assign attributes in turn
         for k in level_info.attr.keys():
             count[k] = 0
@@ -895,9 +910,9 @@ class Level():
                     self.enemies.add(Mook([k*CELL_SIZE+HALF_CELL_SIZE,(j)*CELL_SIZE+HALF_CELL_SIZE]))
                     self.grid[j][k] = ' '
                 elif self.grid[j][k] == 'M': # King Mook
-					king_mook = KingMook([k*CELL_SIZE+HALF_CELL_SIZE,j*CELL_SIZE+HALF_CELL_SIZE])
+                    king_mook = KingMook([k*CELL_SIZE+HALF_CELL_SIZE,j*CELL_SIZE+HALF_CELL_SIZE])
                     self.enemies.add(king_mook)
-					self.boss = king_mook
+                    self.boss = king_mook
                     self.grid[j][k] = ' '
                 elif self.grid[j][k] == 'f': # Frog
                     self.enemies.add(Frog([k*CELL_SIZE+HALF_CELL_SIZE,j*CELL_SIZE], next_attr('f')))
@@ -951,6 +966,8 @@ class Level():
         
         # sets the wrap (whether or not things can wrap around)
         self.wrap = level_info.wrap
+    
+        MAIN_THEME.start()
     
     # updates the level frame by frame
     def update(self):
@@ -1324,9 +1341,9 @@ class Mook():
                         self.pos[X] -= (dx + self.size / 2) # move right
                     self.vel[X] *= -0.8 # slow down over time
                 else: # at an angle
-                    # total = (dx ** 2 + dy ** 2) # just a guess to what direction to go next, and at what speed
-                    # self.vel[X] -= dx * 50 / total
-                    # self.vel[Y] -= dy * 50 / total
+                    total = (dx ** 2 + dy ** 2) # just a guess to what direction to go next, and at what speed
+                    self.vel[X] -= dx * 50 / total
+                    self.vel[Y] -= dy * 50 / total
                     
         self.angle += (self.pos[X]-x0) # rotates as it moves horizontally, proportional to effective displacement
         
@@ -1571,11 +1588,12 @@ def set_handlers(draw = nothing, keydown = nothing, keyup = nothing, mouseclick 
 def update():
     global active_enemies, score
     active_enemies = [e for e in level.enemies if (e.on_screen())] # reset on-screen enemies
-	if level.boss:
-		active_enemies.append(level.boss)
+    if level.boss:
+        active_enemies.append(level.boss)
     for k in [0,1]: # double-speed
         if tom.health > 0: # update Tom if he's alive
-            tom.update()
+            if not tom.update():
+				MAIN_THEME.stop()
         for e in active_enemies: # for each enemy
             if not e.update(): # if it dies
                 level.enemies.remove(e) # remove it from the level
@@ -1594,6 +1612,7 @@ def draw_midgame(canvas):
         frame.set_mouseclick_handler(nothing)
         frame.set_draw_handler(draw_endgame)
         timer.stop() # time suspended
+		MAIN_THEME.stop()
         Level.COMPLETE_SOUND.rewind()
         Level.COMPLETE_SOUND.play()
         return
@@ -1628,6 +1647,7 @@ def draw_midgame(canvas):
         frame.set_keyup_handler(nothing)
         frame.set_mousedrag_handler(nothing)
         draw_end_message(canvas, "GAME OVER")
+		MAIN_THEME.stop()
 
 # draws Tom's score
 def draw_score(canvas):
@@ -1673,17 +1693,17 @@ def draw_tom_stats(canvas):
             line_width = 40*(tom.jetpack_jump/tom.jetpack_jump_max)
             if line_width:
                 canvas.draw_line((180,590-line_width/2),(180+width,590-line_width/2),line_width,"red")
-				
-	draw_compass(canvas)
+                
+    draw_compass(canvas)
 
 def draw_compass(canvas):
-	if level.boss and not level.boss.on_screen():
-		level_center = [camera.pos[0] + 400, camera.pos[1] + 300]
-		boss_center = level.boss.center()
-		angle = math.atan2(level_center[1] - boss_center[1], level_center[0] - boss_center[0])
-		canvas.draw_circle((400, 300), 50, 1, 'black')
-		canvas.draw_line((400, 300), (400 - 50 * math.cos(angle), 300 - 50 * math.sin(angle)), 1, 'black')
-				
+    if level.boss and not level.boss.on_screen():
+        level_center = [camera.pos[0] + 400, camera.pos[1] + 300]
+        boss_center = level.boss.center()
+        angle = math.atan2(level_center[1] - boss_center[1], level_center[0] - boss_center[0])
+        canvas.draw_circle((400, 300), 50, 1, 'black')
+        canvas.draw_line((400, 300), (400 - 50 * math.cos(angle), 300 - 50 * math.sin(angle)), 1, 'black')
+                
 def convert_pellets_to_points():
     global score, disp_score
     if tom.gun > 0:
