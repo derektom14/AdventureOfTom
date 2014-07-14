@@ -1324,9 +1324,9 @@ class Mook():
                         self.pos[X] -= (dx + self.size / 2) # move right
                     self.vel[X] *= -0.8 # slow down over time
                 else: # at an angle
-                    total = (dx ** 2 + dy ** 2) # just a guess to what direction to go next, and at what speed
-                    self.vel[X] -= dx * 50 / total
-                    self.vel[Y] -= dy * 50 / total
+                    # total = (dx ** 2 + dy ** 2) # just a guess to what direction to go next, and at what speed
+                    # self.vel[X] -= dx * 50 / total
+                    # self.vel[Y] -= dy * 50 / total
                     
         self.angle += (self.pos[X]-x0) # rotates as it moves horizontally, proportional to effective displacement
         
